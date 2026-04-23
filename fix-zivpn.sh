@@ -35,28 +35,31 @@ echo "4. Download skrip resmi ZiVPN..."
 ARCH=$(uname -m)
 case "$ARCH" in
 x86_64)
-FILE="zi.sh"      # amd64
-DOWNLOAD_URL="https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh"
-;;
+  FILE="zi.sh"
+  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
+  wget -O /root/zi.sh "https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh"
+  echo "5. Beri izin executable..."
+  chmod +x /root/zi.sh
+  echo "6. Jalankan skrip instalasi ZiVPN..."
+  sudo /root/zi.sh
+  ;;
 aarch64)
-FILE="zi2.sh"       # arm64
-DOWNLOAD_URL="https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi2.sh"
-;;
+  FILE="zi2.sh"
+  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
+  echo "5. Jalankan installer ARM..."
+  bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
+  ;;
 armv7l|armhf)
-FILE="zi3.sh"       # arm32
-DOWNLOAD_URL="https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi3.sh"
-;;
+  FILE="zi3.sh"
+  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
+  echo "5. Jalankan installer ARM 32-bit..."
+  bash <(curl -fsSL https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi3.sh)
+  ;;
 *)
-echo "❌ Arsitektur tidak didukung: $ARCH"
-exit 1
-;;
+  echo "❌ Arsitektur tidak didukung: $ARCH"
+  exit 1
+  ;;
 esac
-echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
-wget -O /root/zi.sh "$DOWNLOAD_URL"
-echo "5. Beri izin executable..."
-chmod +x /root/zi.sh
-echo "6. Jalankan skrip instalasi ZiVPN..."
-sudo /root/zi.sh
 echo "7. Reload systemd dan start service..."
 systemctl daemon-reload
 systemctl start zivpn

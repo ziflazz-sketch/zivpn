@@ -35,6 +35,12 @@ apt update -y && apt install --reinstall wget curl -y && wget -q https://raw.git
 wget -O zi.sh https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh; sudo chmod +x zi.sh; sudo ./zi.sh
 ```
 
+### ⚡ Quick Install UDP ARM
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
+```
+
 > Installer akan otomatis:
 > - Download binary terbaru sesuai arsitektur  
 > - Setup systemd service `zivpn.service`  
