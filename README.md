@@ -1,138 +1,171 @@
+# Dokumentasi REST API ZIVPN
 
-<p align="center">
-  <img src="zivpn.png" width="420">
-</p>
+Dokumentasi ini menjelaskan cara menggunakan REST API untuk mengelola akun ZIVPN secara terprogram.
 
-<h1 align="center">🚀 ZiVPN UDP Server</h1>
+## URL Dasar
 
-UDP server installation for **ZiVPN Tunnel (UDP)** VPN application.
+Semua endpoint API diakses melalui URL dasar berikut:
 
-Server binary available for **Linux amd64**, **arm**, and **arm64** with automatic architecture detection.
-
----
-
-## 🧠 Features
-- Auto detect VPS architecture (amd64 / arm / arm64)  
-- Auto download & install latest UDP binary  
-- Auto setup **systemd service** 
-- Auto configure **UFW firewall** & NAT  
-- Auto apply default "zi" config  
-- Support for **Debian / Ubuntu** (minimal OS)  
-- Optional Dual SC or ZiVPN Only mode menu  
-- Auto alias command `menu` for `/usr/local/bin/zivpn-manager`  
-
----
-
-## 📦 Installation Menu
-
-```bash
-apt update -y && apt install --reinstall wget curl -y && wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install.sh -O /usr/local/bin/install.sh && chmod +x /usr/local/bin/install.sh && /usr/local/bin/install.sh
+```
+http://<IP_ATAU_DOMAIN_SERVER_ANDA>:5888
 ```
 
-> Installer akan otomatis:
-> - Download binary terbaru sesuai arsitektur  
-> - Setup systemd service `zivpn.service`  
-> - Setup firewall UFW & NAT  
-> - Set default password "zi"  
-> - Membuat menu otomatis saat login  
+## Otentikasi
 
----
+Setiap permintaan ke API harus menyertakan kunci otentikasi yang valid. Kunci ini dikirim melalui query parameter bernama `auth`.
 
-## 🔧 Fix ZIVPN
-
-```bash
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/fix-zivpn.sh -O /usr/local/bin/fix-zivpn.sh && chmod +x /usr/local/bin/fix-zivpn.sh && /usr/local/bin/fix-zivpn.sh
+```
+?auth=KUNCI_ANDA
 ```
 
-> Script ini akan:
-> - Memperbaiki service ZIVPN
-> - Reset firewall & NAT
-> - Membackup dan MeRestore Akun lama
-> - Memastikan server aman
+Anda dapat membuat atau mengganti kunci otentikasi melalui menu utama skrip ZIVPN dengan memilih opsi **"Generate API Auth Key"**. Kunci baru akan dikirimkan ke bot Telegram Anda jika sudah dikonfigurasi.
 
-## 📦 Update Menu
+---
+
+## Endpoints
+
+Semua endpoint mendukung metode request `GET` dan `POST`.
+
+### 1. Buat Akun Baru
+
+Endpoint ini digunakan untuk membuat akun ZIVPN baru dengan kata sandi dan masa aktif tertentu.
+
+- **Endpoint:** `/create/zivpn`
+- **Metode:** `GET`, `POST`
+- **Parameter:**
+  - `password` (string, wajib): Kata sandi unik untuk akun baru.
+  - `exp` (integer, wajib): Masa aktif akun dalam **hari**.
+  - `auth` (string, wajib): Kunci otentikasi API Anda.
+
+#### Contoh Request (`curl`)
 
 ```bash
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/update.sh -O /usr/local/bin/update-manager && chmod +x /usr/local/bin/update-manager && /usr/local/bin/update-manager
+curl "http://123.45.67.89:5888/create/zivpn?password=userbaru&exp=30&auth=a1b2c3"
 ```
 
-> Installer akan otomatis:
-> - Setup systemd service New `zivpn.service`  
-> - Setup firewall UFW & NAT  
-> - Set default password "zi"  
-> - Membuat menu otomatis saat login  
+#### Contoh Respons
+
+- **Sukses (200 OK):**
+  ```json
+  {
+    "status": "success",
+    "message": "Success: Account 'userbaru' created, expires in 30 days.\nRestarting ZIVPN service...\nService restarted."
+  }
+  ```
+
+- **Gagal (400 Bad Request - Kata Sandi Sudah Ada):**
+  ```json
+  {
+    "status": "error",
+    "message": "Error: Password 'userbaru' already exists."
+  }
+  ```
 
 ---
 
-## 🧼 Uninstall Menu
+### 2. Hapus Akun
+
+Endpoint ini digunakan untuk menghapus akun ZIVPN berdasarkan kata sandinya.
+
+- **Endpoint:** `/delete/zivpn`
+- **Metode:** `GET`, `POST`
+- **Parameter:**
+  - `password` (string, wajib): Kata sandi akun yang akan dihapus.
+  - `auth` (string, wajib): Kunci otentikasi API Anda.
+
+#### Contoh Request (`curl`)
 
 ```bash
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/uninstall.sh -O /usr/local/bin/uninstall-zivpn && chmod +x /usr/local/bin/uninstall-zivpn && /usr/local/bin/uninstall-zivpn
+curl "http://123.45.67.89:5888/delete/zivpn?password=userlama&auth=a1b2c3"
 ```
 
-> Uninstall akan:
-> - Stop dan disable systemd service  
-> - Hapus binary `/usr/local/bin/zivpn`  
-> - Hapus konfigurasi `/etc/zivpn/`  
-> - Hapus NAT / firewall rules  
+#### Contoh Respons
+
+- **Sukses (200 OK):**
+  ```json
+  {
+    "status": "success",
+    "message": "Success: Account 'userlama' deleted.\nRestarting ZIVPN service...\nService restarted."
+  }
+  ```
+
+- **Gagal (400 Bad Request - Akun Tidak Ditemukan):**
+  ```json
+  {
+    "status": "error",
+    "message": "Error: Password 'userlama' not found."
+  }
+  ```
 
 ---
 
-## 🖥 Supported Architecture
+### 3. Perpanjang Akun
 
-| Architecture | Binary |
-|-------------|--------|
-| **x86_64 (AMD64)** | udp-zivpn-linux-amd64 |
-| **ARM 32-bit** | udp-zivpn-linux-arm |
-| **ARM 64-bit (ARMv8)** | udp-zivpn-linux-arm64 |
+Endpoint ini digunakan untuk memperpanjang masa aktif akun yang sudah ada.
 
----
+- **Endpoint:** `/renew/zivpn`
+- **Metode:** `GET`, `POST`
+- **Parameter:**
+  - `password` (string, wajib): Kata sandi akun yang akan diperpanjang.
+  - `exp` (integer, wajib): Jumlah **hari** tambahan untuk masa aktif.
+  - `auth` (string, wajib): Kunci otentikasi API Anda.
 
-## 📡 Default Configuration
+#### Contoh Request (`curl`)
 
-| Setting | Value |
-|---------|-------|
-| Default Password | `zi` |
-| Service Name | `zivpn.service` |
-| Config File | `/etc/zivpn/config.json` |
-| Binary Path | `/usr/local/bin/zivpn` |
-| Firewall / NAT | UDP 6000-19999 → 5667 |
-| Auto Menu Alias | `menu` → `/usr/local/bin/zivpn-manager` |
-
----
-
-## 📱 Client Application
-
-| Platform | Link |
-|----------|------|
-| Android | [ZiVPN Tunnel](https://play.google.com/store/apps/details?id=com.zi.zivpn) |
-
-> App: **ZiVPN Tunnel**
-
----
-
-## ⚙️ Systemd / Auto Restart
-
-- Service dijalankan dengan:
 ```bash
-systemctl enable zivpn.service
-systemctl start zivpn.service
+curl "http://123.45.67.89:5888/renew/zivpn?password=useraktif&exp=15&auth=a1b2c3"
 ```
-- Service akan **restart otomatis** jika mati
-- Tunggu **network-online.target** sebelum start service → mencegah error UDP bind  
+
+#### Contoh Respons
+
+- **Sukses (200 OK):**
+  ```json
+  {
+    "status": "success",
+    "message": "Success: Account 'useraktif' has been renewed for 15 days."
+  }
+  ```
+
+- **Gagal (400 Bad Request - Akun Tidak Ditemukan):**
+  ```json
+  {
+    "status": "error",
+    "message": "Error: Account 'useraktif' not found."
+  }
+  ```
 
 ---
 
-## 📞 Support
+### 4. Buat Akun Trial
 
-For custom build, business inquiry, reseller system, panel, or telegram bot please contact support.
+Endpoint ini digunakan untuk membuat akun trial dengan masa aktif dalam hitungan menit. Kata sandi akan dibuat secara otomatis.
 
----
+- **Endpoint:** `/trial/zivpn`
+- **Metode:** `GET`, `POST`
+- **Parameter:**
+  - `exp` (integer, wajib): Masa aktif akun dalam **menit**.
+  - `auth` (string, wajib): Kunci otentikasi API Anda.
 
-### 🎉 Thank you for using **ZiVPN UDP Server**
+#### Contoh Request (`curl`)
 
-
-## Quick Install UDP ARM64
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
+curl "http://123.45.67.89:5888/trial/zivpn?exp=60&auth=a1b2c3"
 ```
+
+#### Contoh Respons
+
+- **Sukses (200 OK):**
+  ```json
+  {
+    "status": "success",
+    "message": "Success: Trial account 'trial12345' created, expires in 60 minutes.\nRestarting ZIVPN service...\nService restarted."
+  }
+  ```
+
+- **Gagal (400 Bad Request - Nilai `exp` Tidak Valid):**
+  ```json
+  {
+    "status": "error",
+    "message": "Error: Invalid number of minutes."
+  }
+  ```
