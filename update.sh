@@ -13,6 +13,10 @@ chmod +x /usr/local/bin/zivpn_helper.sh
 wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/update.sh \
 -O /usr/local/bin/update-manager
 chmod +x /usr/local/bin/update-manager
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh \
+-O /usr/local/bin/install_speedtest.sh
+chmod +x /usr/local/bin/install_speedtest.sh
+/usr/local/bin/install_speedtest.sh || true
 echo "🎉 ZiVPN Update completed successfully."
 echo "⏰ Setting auto backup & auto reboot (cron)..."
 CRON_BACKUP="0 * * * * /usr/local/bin/zivpn_helper.sh backup >> /var/log/zivpn_backup.log 2>&1"

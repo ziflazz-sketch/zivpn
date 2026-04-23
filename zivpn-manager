@@ -990,6 +990,16 @@ echo -e "silakan hubungi admin https://wa.me/6285647299390 \n"
 echo -e "${LIGHT_GREEN}Setelah diperpanjang, layanan akan aktif kembali secara otomatis.${NC}\n"
 exit 0
 }
+run_speedtest_direct() {
+if ! command -v speedtest >/dev/null 2>&1; then
+  echo "Speedtest belum terpasang. Jalankan menu 10 atau menu 13 sekali, lalu coba lagi."
+  return 1
+fi
+clear
+echo "Menjalankan speedtest..."
+speedtest --accept-license --accept-gdpr
+}
+
 function show_menu() {
 if [ -f "/etc/zivpn/.expired" ]; then
 show_expired_message_and_exit
@@ -1032,7 +1042,7 @@ case $choice in
 9) systemctl restart zivpn.service --no-block && systemctl restart zivpn-udp.service --no-block && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
 10) wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/update.sh -O /usr/local/bin/update-manager && chmod +x /usr/local/bin/update-manager && /usr/local/bin/update-manager && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
 11) update_expiry_from_license_url && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
-12) wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /tmp/install_speedtest.sh && chmod +x /tmp/install_speedtest.sh && bash /tmp/install_speedtest.sh && speedtest --accept-license --accept-gdpr && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
+12) run_speedtest_direct ; read -p "Tekan Enter untuk kembali ke menu..." ; /usr/local/bin/zivpn-manager ;;
 13) wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/fix-zivpn.sh -O /usr/local/bin/fix-zivpn.sh && chmod +x /usr/local/bin/fix-zivpn.sh && /usr/local/bin/fix-zivpn.sh && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
 14) set_reboot_menu ;;
 15) _delete_expired_accounts ;;
@@ -1059,6 +1069,10 @@ echo "1. Update OS dan install dependensi..."
 apt update
 apt install -y wget curl ca-certificates
 update-ca-certificates
+echo "1b. Menyiapkan Speedtest CLI..."
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /usr/local/bin/install_speedtest.sh
+chmod +x /usr/local/bin/install_speedtest.sh
+/usr/local/bin/install_speedtest.sh || true
 echo "2. Hentikan service lama (jika ada)..."
 systemctl stop zivpn 2>/dev/null
 echo "3. Hapus binary lama (jika ada)..."
@@ -1067,8 +1081,22 @@ echo "4. Download skrip resmi ZiVPN..."
 ARCH=$(uname -m)
 case "$ARCH" in
 x86_64)
-  FILE="zi.sh"
-  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
+FILE="zi.sh"      # amd64
+;;
+aarch64)
+FILE="zi2.sh"       # arm64
+;;
+armv7l|armhf)
+FILE="zi3.sh"       # arm32
+;;
+*)
+echo "❌ Arsitektur tidak didukung: $ARCH"
+exit 1
+;;
+esac
+echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
+case "$ARCH" in
+x86_64)
   wget -O /root/zi.sh "https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh"
   echo "5. Beri izin executable..."
   chmod +x /root/zi.sh
@@ -1076,20 +1104,15 @@ x86_64)
   sudo /root/zi.sh
   ;;
 aarch64)
-  FILE="zi2.sh"
-  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
-  echo "5. Jalankan installer ARM..."
+  echo "5. Menjalankan installer ARM64..."
   bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
   ;;
 armv7l|armhf)
-  FILE="zi3.sh"
-  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
-  echo "5. Jalankan installer ARM 32-bit..."
-  bash <(curl -fsSL https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi3.sh)
-  ;;
-*)
-  echo "❌ Arsitektur tidak didukung: $ARCH"
-  exit 1
+  wget -O /root/zi.sh "https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi3.sh"
+  echo "5. Beri izin executable..."
+  chmod +x /root/zi.sh
+  echo "6. Jalankan skrip instalasi ZiVPN..."
+  sudo /root/zi.sh
   ;;
 esac
 echo "7. Reload systemd dan start service..."

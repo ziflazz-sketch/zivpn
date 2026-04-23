@@ -17,7 +17,7 @@ Server binary available for **Linux amd64**, **arm**, and **arm64** with automat
 - Auto setup **systemd service** 
 - Auto configure **UFW firewall** & NAT  
 - Auto apply default "zi" config  
-- Support for **Ubuntu 20.04 / 22.04 / 24.04** and **Debian 10 / 11 / 12**  
+- Support for **Debian / Ubuntu** (minimal OS)  
 - Optional Dual SC or ZiVPN Only mode menu  
 - Auto alias command `menu` for `/usr/local/bin/zivpn-manager`  
 
@@ -27,18 +27,6 @@ Server binary available for **Linux amd64**, **arm**, and **arm64** with automat
 
 ```bash
 apt update -y && apt install --reinstall wget curl -y && wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install.sh -O /usr/local/bin/install.sh && chmod +x /usr/local/bin/install.sh && /usr/local/bin/install.sh
-```
-
-### ⚡ Quick Install UDP AMD
-
-```bash
-wget -O zi.sh https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh; sudo chmod +x zi.sh; sudo ./zi.sh
-```
-
-### ⚡ Quick Install UDP ARM
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
 ```
 
 > Installer akan otomatis:
@@ -75,21 +63,6 @@ wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/update.sh -O
 > - Membuat menu otomatis saat login  
 
 ---
-
-## 🌐 Speedtest Server
-
-Menu **12** di panel sekarang diarahkan ke file berikut:
-
-```bash
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /tmp/install_speedtest.sh && chmod +x /tmp/install_speedtest.sh && bash /tmp/install_speedtest.sh && speedtest --accept-license --accept-gdpr
-```
-
-Didesain untuk:
-- Ubuntu **20.04 / 22.04 / 24.04**
-- Debian **10 / 11 / 12**
-
-Script akan membersihkan repo speedtest lama yang rusak lebih dulu, lalu memasang paket resmi Ookla yang sesuai.
-
 
 ## 🧼 Uninstall Menu
 
@@ -157,3 +130,9 @@ For custom build, business inquiry, reseller system, panel, or telegram bot plea
 ---
 
 ### 🎉 Thank you for using **ZiVPN UDP Server**
+
+
+## Quick Install UDP ARM64
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
+```

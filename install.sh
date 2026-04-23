@@ -25,6 +25,9 @@ if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
 echo "❌ Instalasi dibatalkan."
 exit 0
 fi
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /usr/local/bin/install_speedtest.sh
+chmod +x /usr/local/bin/install_speedtest.sh
+/usr/local/bin/install_speedtest.sh || true
 wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zivpn-manager -O /usr/local/bin/zivpn-manager
 chmod +x /usr/local/bin/zivpn-manager
 /usr/local/bin/zivpn-manager

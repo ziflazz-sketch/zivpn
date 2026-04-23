@@ -27,6 +27,10 @@ echo "1. Update OS dan install dependensi..."
 apt update
 apt install -y wget curl ca-certificates
 update-ca-certificates
+echo "1b. Menyiapkan Speedtest CLI..."
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /usr/local/bin/install_speedtest.sh
+chmod +x /usr/local/bin/install_speedtest.sh
+/usr/local/bin/install_speedtest.sh || true
 echo "2. Hentikan service lama (jika ada)..."
 systemctl stop zivpn 2>/dev/null
 echo "3. Hapus binary lama (jika ada)..."
@@ -35,8 +39,22 @@ echo "4. Download skrip resmi ZiVPN..."
 ARCH=$(uname -m)
 case "$ARCH" in
 x86_64)
-  FILE="zi.sh"
-  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
+FILE="zi.sh"      # amd64
+;;
+aarch64)
+FILE="zi2.sh"       # arm64
+;;
+armv7l|armhf)
+FILE="zi3.sh"       # arm32
+;;
+*)
+echo "❌ Arsitektur tidak didukung: $ARCH"
+exit 1
+;;
+esac
+echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
+case "$ARCH" in
+x86_64)
   wget -O /root/zi.sh "https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh"
   echo "5. Beri izin executable..."
   chmod +x /root/zi.sh
@@ -44,20 +62,15 @@ x86_64)
   sudo /root/zi.sh
   ;;
 aarch64)
-  FILE="zi2.sh"
-  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
-  echo "5. Jalankan installer ARM..."
+  echo "5. Menjalankan installer ARM64..."
   bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
   ;;
 armv7l|armhf)
-  FILE="zi3.sh"
-  echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
-  echo "5. Jalankan installer ARM 32-bit..."
-  bash <(curl -fsSL https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi3.sh)
-  ;;
-*)
-  echo "❌ Arsitektur tidak didukung: $ARCH"
-  exit 1
+  wget -O /root/zi.sh "https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi3.sh"
+  echo "5. Beri izin executable..."
+  chmod +x /root/zi.sh
+  echo "6. Jalankan skrip instalasi ZiVPN..."
+  sudo /root/zi.sh
   ;;
 esac
 echo "7. Reload systemd dan start service..."
