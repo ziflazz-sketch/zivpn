@@ -54,7 +54,9 @@ sed -i -E "s/\"config\": ?\[[[:space:]]*\"zi\"[[:space:]]*\]/${new_config_str}/g
 
 systemctl enable zivpn.service
 systemctl start zivpn.service
-iptables -t nat -A PREROUTING -i $(ip -4 route ls|grep default|grep -Po '(?<=dev )(\S+)'|head -1) -p udp --dport 6000:19999 -j DNAT --to-destination :5667
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_zivpn_nat.sh -O /usr/local/bin/install_zivpn_nat.sh
+chmod +x /usr/local/bin/install_zivpn_nat.sh
+/usr/local/bin/install_zivpn_nat.sh || true
 ufw allow 6000:19999/udp
 ufw allow 5667/udp
 rm zi2.* 1> /dev/null 2> /dev/null

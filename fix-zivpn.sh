@@ -31,6 +31,8 @@ echo "1b. Menyiapkan Speedtest CLI..."
 wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /usr/local/bin/install_speedtest.sh
 chmod +x /usr/local/bin/install_speedtest.sh
 /usr/local/bin/install_speedtest.sh || true
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_zivpn_nat.sh -O /usr/local/bin/install_zivpn_nat.sh
+chmod +x /usr/local/bin/install_zivpn_nat.sh
 echo "2. Hentikan service lama (jika ada)..."
 systemctl stop zivpn 2>/dev/null
 echo "3. Hapus binary lama (jika ada)..."
@@ -79,10 +81,12 @@ systemctl start zivpn
 systemctl enable zivpn
 echo "8. Cek status service..."
 systemctl status zivpn --no-pager
+/usr/local/bin/install_zivpn_nat.sh || true
 echo "✅ Instalasi selesai. Service ZiVPN harusnya aktif dan panel bisa mendeteksi."
 echo -e "Restore Data ZiVPN Old..."
 rm -rf /etc/zivpn
 cp -r /etc/zivpn-backup /etc/zivpn
 systemctl restart zivpn zivpn
 systemctl restart zivpn zivpn-api
+systemctl restart zivpn-nat.service 2>/dev/null || true
 chattr +i /etc/zivpn/api_auth.key

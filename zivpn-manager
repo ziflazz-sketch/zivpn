@@ -1039,7 +1039,7 @@ case $choice in
 6) show_backup_menu ;;
 7) _generate_api_key ;;
 8) _lihat_api_key ;;
-9) systemctl restart zivpn.service --no-block && systemctl restart zivpn-udp.service --no-block && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
+9) systemctl restart zivpn.service --no-block && systemctl restart zivpn-api.service --no-block && systemctl restart zivpn-nat.service --no-block 2>/dev/null || true ; read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
 10) wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/update.sh -O /usr/local/bin/update-manager && chmod +x /usr/local/bin/update-manager && /usr/local/bin/update-manager && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
 11) update_expiry_from_license_url && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
 12) run_speedtest_direct ; read -p "Tekan Enter untuk kembali ke menu..." ; /usr/local/bin/zivpn-manager ;;
@@ -1119,6 +1119,8 @@ echo "7. Reload systemd dan start service..."
 systemctl daemon-reload
 systemctl start zivpn
 systemctl enable zivpn
+echo "7b. Menyiapkan NAT ZiVPN agar tetap aktif setelah reboot..."
+setup_zivpn_nat_persistence
 echo "8. Cek status service..."
 systemctl status zivpn --no-pager
 echo "✅ Instalasi selesai. Service ZiVPN harusnya aktif dan panel bisa mendeteksi."
