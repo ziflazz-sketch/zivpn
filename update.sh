@@ -13,14 +13,12 @@ chmod +x /usr/local/bin/zivpn_helper.sh
 wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/update.sh \
 -O /usr/local/bin/update-manager
 chmod +x /usr/local/bin/update-manager
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh \
--O /usr/local/bin/install_speedtest.sh
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_udpgw_7300.sh -O /usr/local/bin/install_udpgw_7300.sh
+chmod +x /usr/local/bin/install_udpgw_7300.sh
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/setup_zivpn_nat.sh -O /usr/local/bin/setup_zivpn_nat.sh
+chmod +x /usr/local/bin/setup_zivpn_nat.sh
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /usr/local/bin/install_speedtest.sh
 chmod +x /usr/local/bin/install_speedtest.sh
-/usr/local/bin/install_speedtest.sh || true
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_zivpn_nat.sh \
--O /usr/local/bin/install_zivpn_nat.sh
-chmod +x /usr/local/bin/install_zivpn_nat.sh
-/usr/local/bin/install_zivpn_nat.sh || true
 echo "🎉 ZiVPN Update completed successfully."
 echo "⏰ Setting auto backup & auto reboot (cron)..."
 CRON_BACKUP="0 * * * * /usr/local/bin/zivpn_helper.sh backup >> /var/log/zivpn_backup.log 2>&1"
@@ -88,6 +86,37 @@ chmod +x /etc/zivpn/expire_check.sh
 CRON_JOB_EXPIRY="* * * * * /etc/zivpn/expire_check.sh # zivpn-expiry-check"
 (crontab -l 2>/dev/null | grep -v "# zivpn-expiry-check") | crontab -
 (crontab -l 2>/dev/null; echo "$CRON_JOB_EXPIRY") | crontab -
-echo "🧩 Ensuring ZiVPN NAT persistence..."
-/usr/local/bin/install_zivpn_nat.sh || true
+echo "🧩 Checking ZiVPN NAT rule..."
+apt-get update -y >/dev/null 2>&1 || true
+apt-get install -y iptables-persistent netfilter-persistent >/dev/null 2>&1 || true
+systemctl enable netfilter-persistent >/dev/null 2>&1 || true
+IFACE="$(ip -4 route show default 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')"
+if [ -z "${IFACE:-}" ]; then
+echo "⚠️  No default interface detected. Skip NAT."
+else
+if iptables -t nat -C PREROUTING -i "$IFACE" -p udp --dport 6000:19999 -j DNAT --to-destination :5667 2>/dev/null; then
+echo "✅ NAT rule already exists."
+else
+echo "➕ NAT rule missing. Adding..."
+iptables -t nat -A PREROUTING -i "$IFACE" -p udp --dport 6000:19999 -j DNAT --to-destination :5667
+fi
+echo "🧹 Cleaning duplicate NAT rules (keep one)..."
+while true; do
+COUNT="$(iptables -t nat -S PREROUTING 2>/dev/null | grep -c -- "--dport 6000:19999" || true)"
+if [ "${COUNT:-0}" -le 1 ]; then
+break
+fi
+iptables -t nat -D PREROUTING -i "$IFACE" -p udp --dport 6000:19999 -j DNAT --to-destination :5667 2>/dev/null || break
+done
+if netfilter-persistent save >/dev/null 2>&1; then
+echo "✅ netfilter-persistent saved."
+else
+echo "⚠️  Failed to save netfilter-persistent (check permission/service)."
+fi
+fi
+/usr/local/bin/setup_zivpn_nat.sh >/dev/null 2>&1 || true
+/usr/local/bin/install_udpgw_7300.sh >/dev/null 2>&1 || true
+/usr/local/bin/install_speedtest.sh >/dev/null 2>&1 || true
+(crontab -l 2>/dev/null | grep -v "# zivpn-udpgw-auto-start") | crontab - || true
+(crontab -l 2>/dev/null; echo "*/2 * * * * systemctl is-active --quiet badvpn-udpgw.service || systemctl restart badvpn-udpgw.service >/dev/null 2>&1 # zivpn-udpgw-auto-start") | crontab -
 /usr/local/bin/zivpn-manager

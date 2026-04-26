@@ -27,12 +27,6 @@ echo "1. Update OS dan install dependensi..."
 apt update
 apt install -y wget curl ca-certificates
 update-ca-certificates
-echo "1b. Menyiapkan Speedtest CLI..."
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /usr/local/bin/install_speedtest.sh
-chmod +x /usr/local/bin/install_speedtest.sh
-/usr/local/bin/install_speedtest.sh || true
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_zivpn_nat.sh -O /usr/local/bin/install_zivpn_nat.sh
-chmod +x /usr/local/bin/install_zivpn_nat.sh
 echo "2. Hentikan service lama (jika ada)..."
 systemctl stop zivpn 2>/dev/null
 echo "3. Hapus binary lama (jika ada)..."
@@ -55,38 +49,25 @@ exit 1
 ;;
 esac
 echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
-case "$ARCH" in
-x86_64)
-  wget -O /root/zi.sh "https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh"
-  echo "5. Beri izin executable..."
-  chmod +x /root/zi.sh
-  echo "6. Jalankan skrip instalasi ZiVPN..."
-  sudo /root/zi.sh
-  ;;
-aarch64)
-  echo "5. Menjalankan installer ARM64..."
-  bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
-  ;;
-armv7l|armhf)
-  wget -O /root/zi.sh "https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi3.sh"
-  echo "5. Beri izin executable..."
-  chmod +x /root/zi.sh
-  echo "6. Jalankan skrip instalasi ZiVPN..."
-  sudo /root/zi.sh
-  ;;
-esac
+wget -O /root/zi.sh "https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/$FILE"
+echo "5. Beri izin executable..."
+chmod +x /root/zi.sh
+echo "6. Jalankan skrip instalasi ZiVPN..."
+sudo /root/zi.sh
 echo "7. Reload systemd dan start service..."
 systemctl daemon-reload
 systemctl start zivpn
 systemctl enable zivpn
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/setup_zivpn_nat.sh -O /usr/local/bin/setup_zivpn_nat.sh && chmod +x /usr/local/bin/setup_zivpn_nat.sh && /usr/local/bin/setup_zivpn_nat.sh || true
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_udpgw_7300.sh -O /usr/local/bin/install_udpgw_7300.sh && chmod +x /usr/local/bin/install_udpgw_7300.sh && /usr/local/bin/install_udpgw_7300.sh || true
+wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /usr/local/bin/install_speedtest.sh && chmod +x /usr/local/bin/install_speedtest.sh && /usr/local/bin/install_speedtest.sh || true
 echo "8. Cek status service..."
 systemctl status zivpn --no-pager
-/usr/local/bin/install_zivpn_nat.sh || true
-echo "✅ Instalasi selesai. Service ZiVPN harusnya aktif dan panel bisa mendeteksi."
+echo "✅ Instalasi selesai. Service ZiVPN + UDPGW harusnya aktif dan panel bisa mendeteksi."
 echo -e "Restore Data ZiVPN Old..."
 rm -rf /etc/zivpn
 cp -r /etc/zivpn-backup /etc/zivpn
-systemctl restart zivpn zivpn
-systemctl restart zivpn zivpn-api
-systemctl restart zivpn-nat.service 2>/dev/null || true
+systemctl restart zivpn.service || true
+systemctl restart zivpn-api.service || true
+systemctl restart badvpn-udpgw.service || true
 chattr +i /etc/zivpn/api_auth.key

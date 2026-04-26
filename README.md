@@ -132,12 +132,8 @@ For custom build, business inquiry, reseller system, panel, or telegram bot plea
 ### 🎉 Thank you for using **ZiVPN UDP Server**
 
 
-## Quick Install UDP ARM64
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
-```
+## UDPGW Internal
 
-
-## NAT Persistence
-- NAT ZiVPN sekarang dibuat ulang otomatis saat boot lewat `zivpn-nat.service`.
-- Jika NAT hilang, jalankan: `systemctl restart zivpn-nat.service`
+- Script installer: `install_udpgw_7300.sh`
+- Default listen: `127.0.0.1:7300`
+- Panel `zivpn-manager` akan menampilkan status `UDPGW 7300`

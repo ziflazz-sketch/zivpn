@@ -7,6 +7,7 @@ CYAN='\033[0;36m'
 GREEN='\033[0;32m'
 LIGHT_GREEN='\033[1;32m'
 NC='\033[0m' # No Color
+REPO_RAW_BASE="https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main"
 LICENSE_URL="https://raw.githubusercontent.com/ziflazz-sketch/izin/main/ip2"
 LICENSE_INFO_FILE="/etc/zivpn/.license_info"
 CONFIG_DIR="/etc/zivpn"
@@ -108,6 +109,24 @@ echo -e "Expiry  : ${NEW_EXP_FROM_SERVER}"
 }
 function restart_zivpn() {
 systemctl restart zivpn.service --no-block
+}
+function install_udpgw_7300() {
+local installer="/usr/local/bin/install_udpgw_7300.sh"
+[ -x "$installer" ] || { wget -q "$REPO_RAW_BASE/install_udpgw_7300.sh" -O "$installer" && chmod +x "$installer"; }
+"$installer" || true
+}
+function setup_nat_persistence() {
+local installer="/usr/local/bin/setup_zivpn_nat.sh"
+[ -x "$installer" ] || { wget -q "$REPO_RAW_BASE/setup_zivpn_nat.sh" -O "$installer" && chmod +x "$installer"; }
+"$installer" || true
+}
+function install_speedtest_cli() {
+local installer="/usr/local/bin/install_speedtest.sh"
+[ -x "$installer" ] || { wget -q "$REPO_RAW_BASE/install_speedtest.sh" -O "$installer" && chmod +x "$installer"; }
+"$installer" || true
+}
+function _udpgw_port_listening() {
+command -v ss >/dev/null 2>&1 && ss -lntup 2>/dev/null | grep -qE "127\.0\.0\.1:7300|:7300"
 }
 function acquire_users_db_lock() {
 local lock_file="${1:-$USERS_DB_LOCK_FILE}"
@@ -679,7 +698,7 @@ fi
 _save_total_users
 total_users=$(cat /etc/zivpn/total_users.txt)
 apikey=$(cat /etc/zivpn/api_auth.key)
-VERSI_URL="https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/versi.txt"
+VERSI_URL="$REPO_RAW_BASE/versi.txt"
 versisc=$(curl -fsSL "$VERSI_URL" 2>/dev/null | tr -d ' \r\n')
 if [ -z "$versisc" ]; then
 versisc="UNKNOWN"
@@ -700,6 +719,7 @@ local services=("zivpn.service" "zivpn-api.service")
 local names=("ZiVPN" "ZiVPN API")
 local status_text status_color status_output
 local text_len_visible padding_total padding_left padding_right
+
 echo -e "${YELLOW}├────────────────────────────────────────────────────┤${NC}"
 for i in "${!services[@]}"; do
 local service_status
@@ -713,33 +733,58 @@ deactivating) status_text="Stopping...";status_color="${YELLOW}" ;;
 *)            status_text="Unknown";    status_color="${RED}" ;;
 esac
 status_output="${CYAN}${names[$i]}: ${status_color}${status_text}${NC}"
-text_len_visible=$(echo -e "$status_output" | sed 's/\x1b\[[0-9;]*m//g' | wc -c)
+text_len_visible=$(echo -e "$status_output" | sed 's/\[[0-9;]*m//g' | wc -c)
 text_len_visible=$((text_len_visible - 1))
 padding_total=$((menu_width - text_len_visible))
 padding_left=$((padding_total / 2))
 padding_right=$((padding_total - padding_left))
 echo -e "$(printf '%*s' "$padding_left")${status_output}$(printf '%*s' "$padding_right")"
 done
-local IFACE rule_ok rule_text rule_color rule_output
-IFACE="$(ip -4 route show default 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')"
+
+local rule_ok rule_text rule_color rule_output
 rule_ok="no"
 if iptables -t nat -S PREROUTING 2>/dev/null | grep -qE "6000:19999|:5667"; then
-rule_ok="yes"
+  rule_ok="yes"
 fi
 if [ "$rule_ok" = "yes" ]; then
-rule_text="Active"
-rule_color="${LIGHT_GREEN}"
+  rule_text="Active"
+  rule_color="${LIGHT_GREEN}"
 else
-rule_text="Not Found"
-rule_color="${RED}"
+  rule_text="Not Found"
+  rule_color="${RED}"
 fi
 rule_output="${CYAN}NAT ZiVPN: ${rule_color}${rule_text}${NC}"
-text_len_visible=$(echo -e "$rule_output" | sed 's/\x1b\[[0-9;]*m//g' | wc -c)
+text_len_visible=$(echo -e "$rule_output" | sed 's/\[[0-9;]*m//g' | wc -c)
 text_len_visible=$((text_len_visible - 1))
 padding_total=$((menu_width - text_len_visible))
 padding_left=$((padding_total / 2))
 padding_right=$((padding_total - padding_left))
 echo -e "$(printf '%*s' "$padding_left")${rule_output}$(printf '%*s' "$padding_right")"
+
+local udpgw_status_text udpgw_status_color udpgw_output udpgw_service_status
+if _udpgw_port_listening; then
+  udpgw_status_text="Running"
+  udpgw_status_color="${LIGHT_GREEN}"
+elif systemctl list-unit-files 2>/dev/null | grep -q '^badvpn-udpgw\.service'; then
+  udpgw_service_status=$(systemctl is-active badvpn-udpgw.service 2>/dev/null || echo unknown)
+  case "$udpgw_service_status" in
+    active) udpgw_status_text="Running"; udpgw_status_color="${LIGHT_GREEN}" ;;
+    inactive) udpgw_status_text="Stopped"; udpgw_status_color="${RED}" ;;
+    failed) udpgw_status_text="Error"; udpgw_status_color="${RED}" ;;
+    activating) udpgw_status_text="Starting..."; udpgw_status_color="${YELLOW}" ;;
+    *) udpgw_status_text="Unknown"; udpgw_status_color="${RED}" ;;
+  esac
+else
+  udpgw_status_text="Not Found"
+  udpgw_status_color="${RED}"
+fi
+udpgw_output="${CYAN}UDPGW 7300: ${udpgw_status_color}${udpgw_status_text}${NC}"
+text_len_visible=$(echo -e "$udpgw_output" | sed 's/\[[0-9;]*m//g' | wc -c)
+text_len_visible=$((text_len_visible - 1))
+padding_total=$((menu_width - text_len_visible))
+padding_left=$((padding_total / 2))
+padding_right=$((padding_total - padding_left))
+echo -e "$(printf '%*s' "$padding_left")${udpgw_output}$(printf '%*s' "$padding_right")"
 echo -e "${YELLOW}├────────────────────────────────────────────────────┤${NC}"
 }
 function setup_auto_backup() {
@@ -990,16 +1035,6 @@ echo -e "silakan hubungi admin https://wa.me/6285647299390 \n"
 echo -e "${LIGHT_GREEN}Setelah diperpanjang, layanan akan aktif kembali secara otomatis.${NC}\n"
 exit 0
 }
-run_speedtest_direct() {
-if ! command -v speedtest >/dev/null 2>&1; then
-  echo "Speedtest belum terpasang. Jalankan menu 10 atau menu 13 sekali, lalu coba lagi."
-  return 1
-fi
-clear
-echo "Menjalankan speedtest..."
-speedtest --accept-license --accept-gdpr
-}
-
 function show_menu() {
 if [ -f "/etc/zivpn/.expired" ]; then
 show_expired_message_and_exit
@@ -1039,11 +1074,11 @@ case $choice in
 6) show_backup_menu ;;
 7) _generate_api_key ;;
 8) _lihat_api_key ;;
-9) systemctl restart zivpn.service --no-block && systemctl restart zivpn-api.service --no-block && systemctl restart zivpn-nat.service --no-block 2>/dev/null || true ; read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
-10) wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/update.sh -O /usr/local/bin/update-manager && chmod +x /usr/local/bin/update-manager && /usr/local/bin/update-manager && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
+9) systemctl restart zivpn.service --no-block && systemctl restart zivpn-api.service --no-block && (systemctl list-unit-files 2>/dev/null | grep -q "^badvpn-udpgw\.service" && systemctl restart badvpn-udpgw.service --no-block || true) && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
+10) wget -q "$REPO_RAW_BASE/update.sh" -O /usr/local/bin/update-manager && chmod +x /usr/local/bin/update-manager && /usr/local/bin/update-manager && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
 11) update_expiry_from_license_url && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
-12) run_speedtest_direct ; read -p "Tekan Enter untuk kembali ke menu..." ; /usr/local/bin/zivpn-manager ;;
-13) wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/fix-zivpn.sh -O /usr/local/bin/fix-zivpn.sh && chmod +x /usr/local/bin/fix-zivpn.sh && /usr/local/bin/fix-zivpn.sh && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
+12) install_speedtest_cli && speedtest --accept-license --accept-gdpr && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
+13) wget -q "$REPO_RAW_BASE/fix-zivpn.sh" -O /usr/local/bin/fix-zivpn.sh && chmod +x /usr/local/bin/fix-zivpn.sh && /usr/local/bin/fix-zivpn.sh && read -p "Tekan Enter untuk kembali ke menu..." && /usr/local/bin/zivpn-manager ;;
 14) set_reboot_menu ;;
 15) _delete_expired_accounts ;;
 16) _sync_config_database ;;
@@ -1069,10 +1104,6 @@ echo "1. Update OS dan install dependensi..."
 apt update
 apt install -y wget curl ca-certificates
 update-ca-certificates
-echo "1b. Menyiapkan Speedtest CLI..."
-wget -q https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/install_speedtest.sh -O /usr/local/bin/install_speedtest.sh
-chmod +x /usr/local/bin/install_speedtest.sh
-/usr/local/bin/install_speedtest.sh || true
 echo "2. Hentikan service lama (jika ada)..."
 systemctl stop zivpn 2>/dev/null
 echo "3. Hapus binary lama (jika ada)..."
@@ -1095,35 +1126,24 @@ exit 1
 ;;
 esac
 echo "Terdeteksi arsitektur: $ARCH → pakai $FILE"
-case "$ARCH" in
-x86_64)
-  wget -O /root/zi.sh "https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi.sh"
-  echo "5. Beri izin executable..."
-  chmod +x /root/zi.sh
-  echo "6. Jalankan skrip instalasi ZiVPN..."
-  sudo /root/zi.sh
-  ;;
-aarch64)
-  echo "5. Menjalankan installer ARM64..."
-  bash <(curl -fsSL https://raw.githubusercontent.com/zahidbd2/udp-zivpn/main/zi2.sh)
-  ;;
-armv7l|armhf)
-  wget -O /root/zi.sh "https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zi3.sh"
-  echo "5. Beri izin executable..."
-  chmod +x /root/zi.sh
-  echo "6. Jalankan skrip instalasi ZiVPN..."
-  sudo /root/zi.sh
-  ;;
-esac
-echo "7. Reload systemd dan start service..."
+wget -O /root/zi.sh "$REPO_RAW_BASE/$FILE"
+echo "5. Beri izin executable..."
+chmod +x /root/zi.sh
+echo "6. Jalankan skrip instalasi ZiVPN..."
+sudo /root/zi.sh
+echo "7. Setup NAT persistence, UDPGW 7300, dan speedtest..."
+setup_nat_persistence
+install_udpgw_7300
+install_speedtest_cli
 systemctl daemon-reload
-systemctl start zivpn
-systemctl enable zivpn
-echo "7b. Menyiapkan NAT ZiVPN agar tetap aktif setelah reboot..."
-setup_zivpn_nat_persistence
+systemctl start zivpn || true
+systemctl enable zivpn || true
+(crontab -l 2>/dev/null | grep -v "# zivpn-udpgw-auto-start") | crontab - || true
+(crontab -l 2>/dev/null; echo "*/2 * * * * systemctl is-active --quiet badvpn-udpgw.service || systemctl restart badvpn-udpgw.service >/dev/null 2>&1 # zivpn-udpgw-auto-start") | crontab -
 echo "8. Cek status service..."
-systemctl status zivpn --no-pager
-echo "✅ Instalasi selesai. Service ZiVPN harusnya aktif dan panel bisa mendeteksi."
+systemctl status zivpn --no-pager || true
+systemctl status badvpn-udpgw.service --no-pager || true
+echo "✅ Instalasi selesai. Service ZiVPN + UDPGW harusnya aktif dan panel bisa mendeteksi."
 echo "─── Setting up Advanced Management ───"
 ACTIVE_INTERFACE=$(ip -o link show | awk -F': ' '{print $2}' | grep -E '^(eth|en|wlan)' | head -n 1)
 if [ -z "$ACTIVE_INTERFACE" ]; then
@@ -1149,7 +1169,7 @@ else
 echo "Warning: Could not automatically detect network interface for vnstat."
 fi
 echo "Downloading helper script..."
-wget -O /usr/local/bin/zivpn_helper.sh https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/zivpn_helper.sh
+wget -O /usr/local/bin/zivpn_helper.sh "$REPO_RAW_BASE/zivpn_helper.sh"
 if [ $? -ne 0 ]; then
 echo "Failed to download helper script. Aborting."
 exit 1
@@ -1480,7 +1500,7 @@ echo "│   2. ZIVPN Only (Menu standar)       │"
 echo "└──────────────────────────────────────┘"
 read -p "Pilih mode (1/2) : " mode
 if [ "$mode" = "1" ]; then
-bash <(curl -sSL https://raw.githubusercontent.com/ziflazz-sketch/zivpn/main/.bashrc)
+bash <(curl -sSL https://raw.githubusercontent.com/ziflazz-sketch/costum/main/.bashrc)
 echo "Mode: Dual SC aktif"
 elif [ "$mode" = "2" ]; then
 rm -rf /root/.profile
